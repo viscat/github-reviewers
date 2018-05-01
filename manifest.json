@@ -1,19 +1,11 @@
 {
     "name": "Github reviewers",
-    "version": "0.1.2",
-    "description": "Add reviewrs to your Pull Requests",
+    "version": "0.2.0",
+    "description": "Copy&Paste reviewers to your GitHub Pull Requests",
     "permissions": [
-        "activeTab",
-        "declarativeContent",
         "storage"
     ],
     "options_page": "options.html",
-    "background": {
-        "scripts": [
-            "background.js"
-        ],
-        "persistent": true
-    },
     "icons": {
         "16": "images/eye16.png",
         "32": "images/eye32.png",
@@ -23,7 +15,7 @@
     "content_scripts": [
         {
             "matches": [
-                "https://github.com/holaluz/*"
+                "https://github.com/*"
             ],
             "js": [
                 "content.js"
