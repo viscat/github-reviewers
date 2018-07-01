@@ -1,4 +1,3 @@
-const STORAGE_KEY = 'reviwerProfiles';
 const DEFAULT_PROFILE = 'default'
 
 let selectedProfile = DEFAULT_PROFILE
@@ -6,6 +5,7 @@ let selectedProfile = DEFAULT_PROFILE
 const profileSelector = document.getElementById('profile-selector');
 const btnAddProfile = document.getElementById('btn-add-profile');
 const btnRemoveProfile = document.getElementById('btn-remove-profile');
+const reviwersArea = document.getElementById('reviewer-ids');
 
 
 const bindAddProfile = () => {
@@ -14,9 +14,9 @@ const bindAddProfile = () => {
         let inputText = document.getElementById('input-profile-name')
         let newProfile = inputText.value
         if (newProfile.trim() !== '') {
-            chrome.storage.sync.get(STORAGE_KEY, function (data) {
-                data[STORAGE_KEY][newProfile] = null;
-                saveProfiles(data[STORAGE_KEY])
+            getProfiles((profiles) => {
+                profiles[newProfile] = null;
+                saveProfiles(profiles)
                 loadProfiles()
             })
         }
@@ -28,10 +28,10 @@ const bindRemoveProfile = () => {
     btnRemoveProfile.addEventListener('click', (e) => {
         e.preventDefault();
         let deleteProfile = profileSelector.value
-        chrome.storage.sync.get(STORAGE_KEY, function (data) {
-            delete data[STORAGE_KEY][deleteProfile];
+        getProfiles( profiles => {
+            delete profiles[deleteProfile];
 
-            saveProfiles(data[STORAGE_KEY])
+            saveProfiles(profiles)
             selectedProfile = DEFAULT_PROFILE
             loadProfiles()
         })
@@ -46,15 +46,15 @@ const bindSelectProfile = () => {
 }
 
 const bindReviwersAdded = () => {
-    document.getElementById('reviewer-ids').addEventListener('change', function (element) {
+    reviwersArea.addEventListener('change', function (element) {
         let values = this.value.trim();
         let reviewerIds = [];
         if (values !== "") {
             reviewerIds = values.split("\n");
         }
-        chrome.storage.sync.get(STORAGE_KEY, function (data) {
-            data[STORAGE_KEY][profileSelector.value] = reviewerIds
-            saveProfiles(data[STORAGE_KEY])
+        getProfiles( profiles => {
+            profiles[profileSelector.value] = reviewerIds
+            saveProfiles(profiles)
             loadProfiles()
         })
     });
@@ -62,9 +62,8 @@ const bindReviwersAdded = () => {
 
 const loadProfiles = () => {
     profileSelector.innerHTML = '';
-    chrome.storage.sync.get(STORAGE_KEY, function (data) {
-        if (data[STORAGE_KEY]) {
-            let profiles = data[STORAGE_KEY]
+    getProfiles((profiles) => {
+        if (profiles) {
             profileSelector.appendChild(createProfileOption(DEFAULT_PROFILE))
             delete profiles[DEFAULT_PROFILE]
 
@@ -72,7 +71,7 @@ const loadProfiles = () => {
                 profileSelector.appendChild(createProfileOption(profile))
             })
         } else {
-            chrome.storage.sync.get(STORAGE_KEY, (data) => {
+            chrome.storage.sync.get('reviewerIds', (data) => {
                 let defaultProfile = document.createElement('option')
                 defaultProfile.label = DEFAULT_PROFILE
                 defaultProfile.value = DEFAULT_PROFILE
@@ -95,17 +94,12 @@ const createProfileOption = (profile) => {
 }
 
 const getProfileData = (profile) => {
-    let inputArea = document.getElementById('reviewer-ids')
-    inputArea.value = ''
-    chrome.storage.sync.get(STORAGE_KEY, function (data) {
-        if (data[STORAGE_KEY][profile]) {
-            inputArea.value = data[STORAGE_KEY][profile].join("\n");
+    reviwersArea.value = ''
+    getProfiles((profiles) => {
+        if (profiles[profile]) {
+            reviwersArea.value = profiles[profile].join("\n");
         }
     });
-}
-
-const saveProfiles = (profiles) => {
-    chrome.storage.sync.set({ [STORAGE_KEY]: profiles });
 }
 
 bindAddProfile()

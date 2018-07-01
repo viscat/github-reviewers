@@ -1,14 +1,34 @@
+const DEFAULT_PROFILE = 'default'
+
 document.addEventListener('pjax:end', function (event) {
     loadUI();
 });
 loadUI();
 
 function loadUI() {
-    let element = document.querySelectorAll("button[aria-label='Request a review']")[0];
-    if (typeof element === 'undefined') {
+    let element = document.querySelector("button[aria-label='Request a review']");
+    if (!element) {
         return;
     }
 
+    getProfiles(profiles => {
+        if (profiles) {
+            if (Object.keys(profiles).length > 1) {
+                createSelectors(element, profiles)
+            } else {
+                createButtons(element)
+            }
+        } else {
+            chrome.storage.sync.get('reviewerIds', (data) => {
+                let defaultValue = data['reviewerIds'] ? data['reviewerIds'] : []
+                saveProfiles({ [DEFAULT_PROFILE]: defaultValue })
+                loadUI();
+            });
+        }
+    })
+}
+
+const createButtons = element => {
     if (!document.getElementById('copy-reviewers')) {
         element.parentNode.insertBefore(createCopyReviewersButton(), element.nextSibling);
     }
@@ -17,7 +37,16 @@ function loadUI() {
     }
 }
 
-function createCopyReviewersButton() {
+const createSelectors = (element, profiles) => {
+    if (!document.getElementById('copy-reviewers')) {
+        element.parentNode.insertBefore(createCopyReviewersSelector(profiles), element.nextSibling);
+    }
+    if (!document.getElementById('paste-reviewers')) {
+        element.parentNode.insertBefore(createPasteReviewersSelector(profiles), element.nextSibling);
+    }
+}
+
+const createCopyReviewersButton = () => {
     let button = document.createElement("button");
     button.id = "copy-reviewers";
     button.innerHTML = "Copy reviewers";
@@ -30,13 +59,15 @@ function createCopyReviewersButton() {
         document.querySelectorAll('.js-hovercard-left').forEach(function (reviewer) {
             reviewerIds.push(reviewer.getAttribute('data-hovercard-user-id'));
         });
-        chrome.storage.sync.set({reviewerIds: reviewerIds});
+
+        saveProfiles({ [DEFAULT_PROFILE]: reviewerIds })
+        alert('Reviewers copied')
     };
 
     return button;
 }
 
-function createPasteReviewersButton() {
+const createPasteReviewersButton = () => {
     let button = document.createElement("button");
     button.innerHTML = "Paste reviewers";
     button.type = "button";
@@ -45,29 +76,112 @@ function createPasteReviewersButton() {
     button.classList.add("discussion-sidebar-toggle");
 
     button.onclick = function () {
-        chrome.storage.sync.get('reviewerIds', function (data) {
-            let reviewerSelectors = "";
-            data.reviewerIds.forEach(function (id) {
-                reviewerSelectors += "input[value='" + id + "']:not(:checked),"
-            });
-            if (data.reviewerIds.length === 0) {
+        getProfiles(profiles => {
+            if (profiles[DEFAULT_PROFILE].length < 1) {
                 alert("No reviewers configured");
                 return;
             }
-            let reviewersBox = document.getElementById('review-filter-field').parentNode.parentNode.parentNode.parentNode;
-            if (!reviewersBox.classList.contains('js-active-navigation-container')) {
-                document.querySelectorAll("button[aria-label='Request a review']")[0].click();
-            }
-            setTimeout(function () {
-                document.querySelectorAll(reviewerSelectors.slice(0, -1)).forEach(function (e) {
-                    e.click()
-                });
-                document.querySelectorAll("button[aria-label='Request a review']")[0].click();
-                setTimeout(function () {
-                    loadUI();
-                }, 500);
-            }, 500);
+            appendReviewers(profiles[DEFAULT_PROFILE])
         });
     };
     return button;
+}
+
+const createCopyReviewersSelector = profiles => {
+    let select = document.createElement('select')
+    select.style.width = '100%';
+
+    select.id = 'copy-reviewers'
+
+    let emptyOption = document.createElement('option')
+    emptyOption.label = 'Select copy profile'
+    emptyOption.selected = true
+    emptyOption.disabled = true
+    emptyOption.value = null
+
+    select.appendChild(emptyOption)
+
+    Object.keys(profiles).forEach(function (profile) {
+        let optionProfile = document.createElement('option')
+        optionProfile.label = profile
+        optionProfile.value = profile
+        select.appendChild(optionProfile)
+    })
+
+    select.addEventListener('change', function (e) {
+        let selectedProfile = this.value;
+        let reviewerIds = [];
+        document.querySelectorAll('.js-hovercard-left').forEach(function (reviewer) {
+            reviewerIds.push(reviewer.getAttribute('data-hovercard-user-id'));
+        })
+
+        getProfiles(profiles => {
+            profiles[selectedProfile] = reviewerIds
+            saveProfiles(profiles)
+            this.childNodes[0].selected = true
+            alert(`Reviewers copied to ${selectedProfile}`)
+        });
+    });
+
+    let wrapper = document.createElement('p');
+    wrapper.appendChild(select)
+
+    return wrapper;
+}
+
+const createPasteReviewersSelector = profiles => {
+    let select = document.createElement('select')
+    select.style.width = '100%';
+    select.id = 'paste-reviewers'
+
+    let emptyOption = document.createElement('option')
+    emptyOption.label = 'Select paste profile'
+    emptyOption.selected = true
+    emptyOption.disabled = true
+
+    select.appendChild(emptyOption)
+
+    Object.keys(profiles).forEach(function (profile) {
+        let optionProfile = document.createElement('option')
+        optionProfile.label = profile
+        optionProfile.value = profile
+        select.appendChild(optionProfile)
+    })
+
+    select.addEventListener('change', function (e) {
+        e.preventDefault();
+        const selectedProfile = this.value;
+
+        getProfiles(profiles => {
+            if (profiles[selectedProfile].length < 1) {
+                alert("No reviewers configured for the selected profile");
+                return;
+            }
+            appendReviewers(profiles[selectedProfile])
+        });
+
+    });
+    let wrapper = document.createElement('p');
+    wrapper.appendChild(select)
+
+    return wrapper;
+}
+
+const appendReviewers = (reviewers) => {
+    let reviewerSelectors = reviewers.reduce((result, id) => result + "input[value='" + id + "']:not(:checked),", '');
+
+    let reviewersBox = document.getElementById('review-filter-field').parentNode.parentNode.parentNode.parentNode;
+    if (!reviewersBox.classList.contains('js-active-navigation-container')) {
+        document.querySelector("button[aria-label='Request a review']").click();
+    }
+
+    setTimeout(function () {
+        document.querySelectorAll(reviewerSelectors.slice(0, -1)).forEach(function (e) {
+            e.click()
+        });
+        document.querySelector("button[aria-label='Request a review']").click();
+        setTimeout(function () {
+            loadUI();
+        }, 500);
+    }, 500);
 }
