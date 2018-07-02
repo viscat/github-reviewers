@@ -1,6 +1,6 @@
 {
     "name": "Github reviewers",
-    "version": "0.2.0",
+    "version": "1.0.0",
     "description": "Copy&Paste reviewers to your GitHub Pull Requests",
     "permissions": [
         "storage"
