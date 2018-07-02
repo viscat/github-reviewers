@@ -10,3 +10,4 @@ Add extension in chrome store: https://chrome.google.com/webstore/detail/github-
 
 - Click on "Copy reviewers" to copy the list of current reviewers.
 - Click on "Paste reviewers" to add copied reviewers to the PR.
+

@@ -9,3 +9,4 @@ const getProfiles = callback => {
 const saveProfiles = (profiles) => {
     chrome.storage.sync.set({ [STORAGE_KEY]: profiles });
 }
+

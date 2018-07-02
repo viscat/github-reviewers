@@ -61,7 +61,6 @@ const createCopyReviewersButton = () => {
         });
 
         saveProfiles({ [DEFAULT_PROFILE]: reviewerIds })
-        alert('Reviewers copied')
     };
 
     return button;
@@ -185,3 +184,4 @@ const appendReviewers = (reviewers) => {
         }, 500);
     }, 500);
 }
+
