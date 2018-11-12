@@ -171,14 +171,14 @@ const appendReviewers = (reviewers) => {
 
     let reviewersBox = document.getElementById('review-filter-field').parentNode.parentNode.parentNode.parentNode;
     if (!reviewersBox.classList.contains('js-active-navigation-container')) {
-        document.querySelector("summary[aria-label='Request a review']").click();
+        document.querySelector("summary[data-hotkey='q']").click();
     }
 
     setTimeout(function () {
         document.querySelectorAll(reviewerSelectors.slice(0, -1)).forEach(function (e) {
             e.click();
         });
-        document.querySelector("summary[aria-label='Request a review']").click();
+        document.querySelector("summary[data-hotkey='q']").click();
         setTimeout(function () {
             loadUI();
         }, 500);
